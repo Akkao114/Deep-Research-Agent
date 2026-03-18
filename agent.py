@@ -28,6 +28,7 @@ from prompts import (
     PARTS,
     REPORT_WRITING_PROMPT,
     RESEARCH_SYSTEM_PROMPT,
+    EXECUTIVE_SUMMARY_PROMPT,
 )
 from schemas import PartResearch, ResearchTarget, Signal
 from state import StateManager
@@ -196,6 +197,15 @@ class ResearchAgent:
         signal, confidence = self._parse_signal(response.content)
         return response.content, signal, confidence
 
+    def _write_executive_summary(self, full_report: str) -> str:
+        log("Generating executive summary...", "info")
+        prompt = EXECUTIVE_SUMMARY_PROMPT.format(full_report=full_report[:JUDGMENT_REPORT_CHARS])
+        response = self.router.route_raw(model_tier="high", messages=[{"role": "user", "content": prompt}], max_tokens=1000)
+        self.manager.state.total_input_tokens += response.input_tokens
+        self.manager.state.total_output_tokens += response.output_tokens
+        self._record_model(response)
+        return response.content
+        
     def _parse_signal(self, text: str) -> tuple[Signal | None, float | None]:
         signal = None
         confidence = None
@@ -315,6 +325,11 @@ class ResearchAgent:
             signal, confidence = self._parse_signal(judgment_text)
 
         full_report = self.manager.generate_final_report_text(report_body, judgment_text, signal, confidence)
+        
+        # Insert execution summary at the very beginning
+        exec_summary = self._write_executive_summary(full_report)
+        full_report = f"{exec_summary}\n\n---\n\n{full_report}"
+        
         report_path = self.manager.save_report(full_report)
         self.manager.save_metadata(signal, confidence, report_path)
         
