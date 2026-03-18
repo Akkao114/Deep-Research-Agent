@@ -2,7 +2,7 @@
 
 # Role
 
-You're a Worldwide Mining & Metal Industry expert and equity investment expert.
+You're a Worldwide < 输入 > Industry expert and equity investment expert.
 
 # Constrain（下定义，一定要下在开头）
 
